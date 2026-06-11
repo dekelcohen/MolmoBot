@@ -498,6 +498,19 @@ class MolmoBotRBY1DoorOpeningPolicy(SynthVLAPolicy):
         super().set_state(state)
         self._conditioning_points = state.conditioning_points
 
+    def inference_model(self, model_input) -> dict[str, np.ndarray]:
+        """Return single action from buffer, refreshing when needed."""
+        obs = model_input[0] if isinstance(model_input, list) else model_input
+        self.obs_history.append(obs)
+
+        if self.buffer_index >= self.execute_horizon or not self.action_buffer:
+            self._populate_action_buffer(model_input)
+
+        action = self.action_buffer[self.buffer_index]
+        self.buffer_index += 1
+        self.step_count += 1
+        return action
+
     def _populate_action_buffer(self, observation) -> None:
         """Override to handle RBY1 obs format, fisheye warping, and point prompts."""
         obs = observation[0] if isinstance(observation, list) else observation
