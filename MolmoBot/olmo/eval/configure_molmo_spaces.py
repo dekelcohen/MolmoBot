@@ -400,6 +400,9 @@ class SynthVLARBY1PolicyConfig(BasePolicyConfig):
     action_horizon: int = 16
     execute_horizon: int = 8
 
+    states_mode: str = "cross_attn"
+    relative_max_joint_delta: list[float] | None = [0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2]
+
     clamp_gripper: bool = True
     gripper_representation_count: int = 1
 
