@@ -20,20 +20,31 @@ from molmo_spaces.evaluation.eval_main import run_evaluation
 
 def apply_molmospaces_eval_compatibility_patches() -> None:
     """Patch MolmoSpaces eval for older benchmark task class paths."""
+    import molmo_spaces.tasks.json_eval_task_sampler as json_eval_task_sampler
     from molmo_spaces.tasks.json_eval_task_sampler import JsonEvalTaskSampler
 
+    task_cls_aliases = {
+        "mujoco_thor.tasks.opening_tasks.DoorOpeningTask":
+            "molmo_spaces.tasks.opening_tasks.DoorOpeningTask",
+    }
+
     original_infer_task_type = JsonEvalTaskSampler._infer_task_type
+    original_import_class_from_string = json_eval_task_sampler.import_class_from_string
 
     def patched_infer_task_type(self, spec):
         try:
             return original_infer_task_type(self, spec)
         except ValueError as exc:
             task_cls = spec.get_task_cls()
-            if task_cls == "mujoco_thor.tasks.opening_tasks.DoorOpeningTask":
+            if task_cls in task_cls_aliases:
                 return "door_opening"
             raise exc
 
+    def patched_import_class_from_string(class_path: str):
+        return original_import_class_from_string(task_cls_aliases.get(class_path, class_path))
+
     JsonEvalTaskSampler._infer_task_type = patched_infer_task_type
+    json_eval_task_sampler.import_class_from_string = patched_import_class_from_string
 
 
 def main():
