@@ -476,6 +476,8 @@ class MolmoBotRBY1DoorOpeningPolicy(SynthVLAPolicy):
         self.point_prompt_camera: str = getattr(pc, "point_prompt_camera", "head_camera")
         self.max_conditioning_points: int = getattr(pc, "max_conditioning_points", 1)
         self.gripper_threshold: float = getattr(pc, "gripper_threshold", 5.0)
+        self.state_spec: dict[str, int] = getattr(pc, "state_spec", {})
+        self.state_indices: dict[str, list[int]] = getattr(pc, "state_indices", {})
         self._conditioning_points: dict | None = None
         self._logged_obs_keys: bool = False
 
@@ -552,11 +554,18 @@ class MolmoBotRBY1DoorOpeningPolicy(SynthVLAPolicy):
             qpos = robot_state.get("qpos", {})
 
         qpos_parts = []
-        for group_name in self.action_move_group_names:
+        state_group_names = (
+            list(self.state_spec.keys()) if self.state_spec else self.action_move_group_names
+        )
+        for group_name in state_group_names:
             part = np.asarray(qpos[group_name], dtype=np.float32)
-            expected_dim = self.action_spec[group_name]
-            if part.shape[0] > expected_dim:
-                part = part[:expected_dim]
+
+            if group_name in self.state_indices:
+                part = part[self.state_indices[group_name]]
+            else:
+                expected_dim = self.state_spec.get(group_name, self.action_spec[group_name])
+                if part.shape[0] > expected_dim:
+                    part = part[:expected_dim]
             qpos_parts.append(part)
         state = np.concatenate(qpos_parts).astype(np.float32)
 
@@ -667,6 +676,15 @@ class MolmoBotRBY1PolicyConfig(SynthVLARBY1PolicyConfig):
     use_point_prompts: bool = True
     point_prompt_camera: str = "head_camera"
     max_conditioning_points: int = 10  # max points per object in prompt
+    state_spec: dict[str, int] = {
+        "base": 3,
+        "left_arm": 7,
+        "left_gripper": 1,
+        "right_arm": 7,
+        "right_gripper": 1,
+        "torso": 3,
+    }
+    state_indices: dict[str, list[int]] = {"torso": [1, 2, 3]}
 
     def model_post_init(self, __context) -> None:
         if self.policy_cls is None:
