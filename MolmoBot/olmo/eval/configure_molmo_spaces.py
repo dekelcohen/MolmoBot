@@ -42,6 +42,8 @@ class SynthVLAPolicy(InferencePolicy, StatefulPolicy):
         self.action_horizon = config.policy_config.action_horizon
         self.execute_horizon = config.policy_config.execute_horizon
         self.action_type = config.policy_config.action_type
+        self.clamp_gripper = config.policy_config.clamp_gripper
+        self.gripper_representation_count = config.policy_config.gripper_representation_count
         self.relative_max_joint_delta = config.policy_config.relative_max_joint_delta
         if self.relative_max_joint_delta is not None:
             self.relative_max_joint_delta = np.array(self.relative_max_joint_delta)
