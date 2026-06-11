@@ -18,6 +18,24 @@ from pathlib import Path
 from molmo_spaces.evaluation.eval_main import run_evaluation
 
 
+def apply_molmospaces_eval_compatibility_patches() -> None:
+    """Patch MolmoSpaces eval for older benchmark task class paths."""
+    from molmo_spaces.tasks.json_eval_task_sampler import JsonEvalTaskSampler
+
+    original_infer_task_type = JsonEvalTaskSampler._infer_task_type
+
+    def patched_infer_task_type(self, spec):
+        try:
+            return original_infer_task_type(self, spec)
+        except ValueError as exc:
+            task_cls = spec.get_task_cls()
+            if task_cls == "mujoco_thor.tasks.opening_tasks.DoorOpeningTask":
+                return "door_opening"
+            raise exc
+
+    JsonEvalTaskSampler._infer_task_type = patched_infer_task_type
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Run SynthVLA evaluation",
@@ -83,6 +101,8 @@ def main():
     )
     args = parser.parse_args()
 
+    apply_molmospaces_eval_compatibility_patches()
+
     # Resolve module:ClassName string to actual class so mujoco-thor uses __name__
     # (not the full "module:ClassName" string) when constructing the output directory.
     eval_config_cls = args.eval_config_cls
@@ -110,4 +130,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
